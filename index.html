@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smooth Game Loop with Key Controls</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 400,
+            height: 400,
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image('player', './assets/player.png/');
+            this.load.image('item', './assets/item.png/');
+        }
+
+        function create() {
+            this.player = this.add.rectangle(50, this.sys.game.config.height - 50, 25, 25, 0x0000ff);
+            this.playerSize = 25;
+
+            this.items = this.add.group();
+            this.itemSize = 25;
+            this.maxItems = 5;
+
+            this.score = 0;
+            this.scoreText = this.add.text(10, 10, 'Score: 0', { fontSize: '24px', fill: '#000' });
+
+            this.movingLeft = false;
+            this.movingRight = false;
+
+            this.input.keyboard.on('keydown-LEFT', function () {
+                this.movingLeft = true;
+            }, this);
+
+            this.input.keyboard.on('keydown-RIGHT', function () {
+                this.movingRight = true;
+            }, this);
+
+            this.input.keyboard.on('keyup-LEFT', function () {
+                this.movingLeft = false;
+            }, this);
+
+            this.input.keyboard.on('keyup-RIGHT', function () {
+                this.movingRight = false;
+            }, this);
+        }
+
+        function update(time, delta) {
+            if (this.movingLeft) {
+                this.player.x -= 200 * (delta / 1000);
+            } else if (this.movingRight) {
+                this.player.x += 200 * (delta / 1000);
+            }
+
+            if (this.player.x < 0) {
+                this.player.x = 0;
+            } else if (this.player.x > this.sys.game.config.width - this.playerSize) {
+                this.player.x = this.sys.game.config.width - this.playerSize;
+            }
+
+            this.items.getChildren().forEach(function (item) {
+                item.y += 200 * (delta / 1000);
+
+                if (Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), item.getBounds())) {
+                    item.destroy();
+                    this.score += 10;
+                    this.scoreText.setText('Score: ' + this.score);
+                }
+
+                if (item.y + this.itemSize > this.sys.game.config.height) {
+                    item.destroy();
+                }
+            }, this);
+
+            if (this.items.getChildren().length < this.maxItems && Math.random() < 0.02) {
+                const itemX = Math.random() * (this.sys.game.config.width - this.itemSize);
+                const item = this.add.rectangle(itemX, 0, 25, 25, 0x00ff00);
+                this.items.add(item);
+            }
+        }
+    </script>
+</body>
+</html>
