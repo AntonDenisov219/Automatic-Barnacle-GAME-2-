@@ -5,6 +5,8 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
 <body>
+    <button id="startButton">Start Game</button>
+    <div id="scoreBoard"></div>
     <script>
         const config = {
             type: Phaser.AUTO,
@@ -17,11 +19,20 @@
             }
         };
 
-        const game = new Phaser.Game(config);
+        let game;
+        let gameSpeed = 1;
+        let collectedItems = 0;
+        let scoreText;
+
+        document.getElementById('startButton').addEventListener('click', function() {
+            game = new Phaser.Game(config);
+        });
 
         function preload() {
             this.load.image('player', './assets/player.png/');
             this.load.image('item', './assets/item.png/');
+            this.load.image('enemy', './assets/enemy.png/');
+            this.load.image('yellowItem', './assets/yellow_item.png/');
         }
 
         function create() {
@@ -32,8 +43,11 @@
             this.itemSize = 25;
             this.maxItems = 5;
 
+            this.enemies = this.add.group();
+            this.enemySize = 25;
+
             this.score = 0;
-            this.scoreText = this.add.text(10, 10, 'Score: 0', { fontSize: '24px', fill: '#000' });
+            scoreText = this.add.text(10, 10, 'Score: 0', { fontSize: '24px', fill: '#000' });
 
             this.movingLeft = false;
             this.movingRight = false;
@@ -56,6 +70,10 @@
         }
 
         function update(time, delta) {
+            if (!game) {
+                return;
+            }
+
             if (this.movingLeft) {
                 this.player.x -= 200 * (delta / 1000);
             } else if (this.movingRight) {
@@ -69,16 +87,33 @@
             }
 
             this.items.getChildren().forEach(function (item) {
-                item.y += 200 * (delta / 1000);
+                item.y += 200 * (delta / 1000) * gameSpeed;
 
                 if (Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), item.getBounds())) {
                     item.destroy();
-                    this.score += 10;
-                    this.scoreText.setText('Score: ' + this.score);
+                    this.score += 1; // Add 1 to the score
+                    scoreText.setText('Score: ' + this.score);
+                    collectedItems++;
+
+                    if (this.score === 15) {
+                        gameSpeed *= 1.5;
+                    }
                 }
 
                 if (item.y + this.itemSize > this.sys.game.config.height) {
                     item.destroy();
+                }
+            }, this);
+
+            this.enemies.getChildren().forEach(function (enemy) {
+                enemy.y += 200 * (delta / 1000) * gameSpeed;
+
+                if (Phaser.Geom.Intersects.RectangleToRectangle(this.player.getBounds(), enemy.getBounds())) {
+                    resetGame();
+                }
+
+                if (enemy.y + this.enemySize > this.sys.game.config.height) {
+                    enemy.destroy();
                 }
             }, this);
 
@@ -87,7 +122,31 @@
                 const item = this.add.rectangle(itemX, 0, 25, 25, 0x00ff00);
                 this.items.add(item);
             }
+
+            if (this.items.getChildren().length < this.maxItems && Math.random() < 0.01) {
+                const yellowItemX = Math.random() * (this.sys.game.config.width - this.itemSize);
+                const yellowItem = this.add.rectangle(yellowItemX, 0, 25, 25, 0xffff00);
+                this.items.add(yellowItem);
+            }
+
+            if (this.enemies.getChildren().length < this.maxItems && Math.random() < 0.01) {
+                const enemyX = Math.random() * (this.sys.game.config.width - this.enemySize);
+                const enemy = this.add.rectangle(enemyX, 0, 25, 25, 0xff0000);
+                this.enemies.add(enemy);
+            }
         }
+
+        function resetGame() {
+            this.player.x = 50;
+            this.score = 0;
+            scoreText.setText('Score: ' + this.score);
+            collectedItems = 0;
+            gameSpeed = 1;
+            this.items.clear(true, true);
+            this.enemies.clear(true, true);
+        }
+
+        game.events.on('destroy', resetGame);
     </script>
 </body>
 </html>
